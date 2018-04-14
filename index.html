@@ -848,7 +848,7 @@
         req.onreadystatechange = function () {
           processReqChange(req);
         };
-        req.open("GET", 'http://snoop.wormnet.net/' + url, true);
+        req.open("GET", 'http://snoop.wormnet.net:17030' + url, true);
         req.send("");
       } else {
         logError("XMLHttpRequest error: " + errorMessage);
@@ -1466,7 +1466,7 @@
   <style></style>
 </head>
 
-<body>
+<body onload="javascript:initialise()">
   <div id="background" onmousemove="generic_cancel(this, event);" onmousedown="generic_cancel(this, event);" onmouseup="generic_cancel(this, event);">
     <img src="./backdrop.png" width="100%" height="99%" alt="">
   </div>
