@@ -46,7 +46,7 @@
         div.style.top = stardata.top + noPx;
 
         var img = document.createElement('img');
-        img.setAttribute('src', 'images/stars.gif');
+        img.setAttribute('src', 'http://snoop.wormnet.net:17030/snooper/images/stars.gif');
         //img.setAttribute('src', 'star.png');
         img.style.position = 'absolute';
         img.style.left = "0px";
@@ -548,9 +548,9 @@
       var gamelist = channelGames[channel];
       var row = makeRow(
         [
-          '<div class="padlock"><img src="images/nopadlock.gif" alt="Padlock" style="position: absolute; top: 0px; left: ' +
+          '<div class="padlock"><img src="http://snoop.wormnet.net:17030/snooper/images/nopadlock.gif" alt="Padlock" style="position: absolute; top: 0px; left: ' +
           ((game.password != "") ? "-16" : "0") + 'px;"/><' + '/div>',
-          '<div class="flag"><img src="images/nationflags.png" alt="Nation flag" style="position: absolute; top: -1px; left: ' +
+          '<div class="flag"><img src="http://snoop.wormnet.net:17030/snooper/images/nationflags.png" alt="Nation flag" style="position: absolute; top: -1px; left: ' +
           (game.location * -22 - 1) + 'px;"/><' + '/div>',
           htmlspecialchars(game.name), htmlspecialchars(game.hoster)
         ], [16, 24, 0, 0]);
@@ -607,9 +607,9 @@
 
       var row = makeRow(
         [
-          '<div class="flag"><img src="images/nationflags.png" alt="Nation flag" style="position: absolute; top: -1px; left: ' +
+          '<div class="flag"><img src="http://snoop.wormnet.net:17030/snooper/images/nationflags.png" alt="Nation flag" style="position: absolute; top: -1px; left: ' +
           ((location - 1) * -22 - 1) + 'px;"/><' + '/div>',
-          '<div class="rank"><img src="images/rankstrip.gif" alt="Rank" style="position: absolute; top: ' + (rank * -
+          '<div class="rank"><img src="http://snoop.wormnet.net:17030/snooper/images/rankstrip.gif" alt="Rank" style="position: absolute; top: ' + (rank * -
             17) + 'px; left: 0px;"/><' + '/div>',
           htmlspecialchars(nick)
         ], [24, 48, 0]);
