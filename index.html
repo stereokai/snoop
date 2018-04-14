@@ -292,6 +292,7 @@
       }
 
       document.getElementById('channellist').innerHTML = html;
+      document.getElementById('channellist-mobile').innerHTML = html;
     }
 
     function selectChannel(newChannel) {
@@ -1225,6 +1226,7 @@
     position: relative;
     display: flex;
     flex-direction: column;
+    flex-basis: 224px;
     order: 1;
     height: calc(100% - 20px);
     margin: 10px;
@@ -1232,6 +1234,14 @@
   }
 
   #playerlistbox > #close-button {
+    display: none;
+  }
+
+  #channellist-mobile {
+    display: none;
+  }
+
+  #channels-label {
     display: none;
   }
 }
@@ -1277,14 +1287,14 @@
   overflow-y: scroll;
 }
 
-#channellist_mobile {
+#channellist-mobile {
   margin-top: 2px;
   padding: 6px 0px;
   border: 2px solid #808080;
   background-color: #000040;
 }
 
-#channellist_mobile > a {
+#channellist-mobile > a {
   display: block;
   padding: 5px;
   border: 1px solid transparent;
@@ -1294,7 +1304,7 @@
   text-decoration: none;
 }
 
-#channellist_mobile > a.selectedchannel {
+#channellist-mobile > a.selectedchannel {
   color: yellow !important;
 }
 
@@ -1478,7 +1488,7 @@
     <div class="border10">
       <div id="databox">
         <div id="playerlistbox">
-            <div class="label" onmousedown="generic_cancel(this, event);" onmouseup="generic_cancel(this, event);">Channels</div>
+            <div id="channels-label" class="label" onmousedown="generic_cancel(this, event);" onmouseup="generic_cancel(this, event);">Channels</div>
             <button id="close-button" class="label" onclick="javascript:closeSidebar();">&#x2573;</button>
             <div id="channellist-mobile" onmousedown="generic_cancel(this, event);" onmouseup="generic_cancel(this, event);">
             </div>
