@@ -1205,6 +1205,7 @@
 
 #tableholder1 {
   display: flex;
+  position: relative;
   flex-direction: column;
   flex: 1;
   max-height: calc(100% - 43px);
@@ -1213,8 +1214,30 @@
   background-color: #000040;
 }
 
+#tableholder1 > .datatable tr,
+#tableholder1 > .datatable td,
+#tableholder1 > .datatable > thead,
+#tableholder1 > .datatable > tbody {
+  display: block;
+}
+#tableholder1 > .datatable > tbody {
+  height: calc(100% - 20px);
+  overflow-y: auto;
+}
+#tableholder1 > .datatable > tbody > tr {
+  white-space: nowrap;
+}
+#tableholder1 > .datatable > tbody > tr > td {
+  display: inline-table;
+}
+
 #tableholder1 > .datatable {
-  height: 100%;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: block;
 }
 
 #container > .border10 {
@@ -1268,12 +1291,12 @@
     box-sizing: border-box;
     position: fixed;
     z-index: 1000;
-    margin: 0;
-    padding: 10px;
     top: 0;
     right: 100%;
     bottom: 0;
+    width: 266px;
     height: 100%;
+    margin: 0;
     padding: 20px;
     border-right: 2px solid #808080;
     background: url(./backdrop.png) 0 0/100% 100vh no-repeat;
