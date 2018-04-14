@@ -286,9 +286,9 @@
         var name = channels[x];
         if (name != activeChannel)
           //html += '<a href="javascript:void(setTimeout(&quot;selectChannel(\''+name+'\')&quot;, 2000))" id="'+name+'">#'+name+'</span>';
-          html += '<a href="javascript:selectChannel(\'' + name + '\')" id="' + name + '">#' + name + '</span>';
+          html += '<a href="javascript:selectChannel(\'' + name + '\'); closeSidebar();" id="' + name + '">#' + name + '</span>';
         else
-          html += '<a href="javascript:void" id="' + name + '" class="selectedchannel">#' + name + '</span>';
+          html += '<a href="javascript:closeSidebar();" id="' + name + '" class="selectedchannel">#' + name + '</span>';
       }
 
       document.getElementById('channellist').innerHTML = html;
@@ -722,7 +722,7 @@
     function onSend() {
       dataRequestPeriod = 1000;
       var name = document.getElementById('name').value;
-      var message = document.getElementById('message').value;
+      var message = document.getElementById('message').value || document.getElementById('message_mobile').value;
       if (message == "")
         return;
       else
@@ -874,6 +874,14 @@
       }
     }
 
+    function openSidebar() {
+      document.getElementById('container').classList.add('sidebar-opened');
+    }
+
+    function closeSidebar() {
+      document.getElementById('container').classList.remove('sidebar-opened');
+    }
+
     // -->
   </script>
   <style type="text/css">
@@ -886,6 +894,10 @@
       overflow: hidden;
 
       font-family: Tahoma, sans-serif;
+    }
+
+    body {
+      overflow-y: auto;
     }
 
     html,
@@ -926,13 +938,9 @@
     }
 
     .fullsize {
-      position: absolute;
-      left: 0px;
-      top: 0px;
-      right: 0px;
-      bottom: 0px;
+      position: relative;
       width: 100%;
-      height: 100%;
+      height: 100vh;
     }
 
     .border10 {
@@ -969,24 +977,6 @@
       width: 100%;
     }
 
-    #databox {
-      position: absolute;
-      left: 0px;
-      top: 0px;
-      right: 0px;
-      bottom: 75px;
-      width: 100%;
-    }
-
-    #leftdatabox {
-      position: absolute;
-      top: 0px;
-      bottom: 0px;
-      left: 0px;
-      right: 245px;
-      height: 100%;
-    }
-
     #gamelistbox {
       position: absolute;
       top: 0px;
@@ -1003,24 +993,6 @@
       right: 0px;
       width: 100%;
       height: 60%;
-    }
-
-    #playerlistbox {
-      position: absolute;
-      top: 0px;
-      bottom: 0px;
-      right: 0px;
-      width: 245px;
-      height: 100%;
-    }
-
-    #entrybox {
-      position: absolute;
-      left: 0px;
-      right: 0px;
-      bottom: 0px;
-      width: 100%;
-      height: 75px;
     }
 
     #channellist {
@@ -1181,6 +1153,7 @@
       border-color: #808080;
       color: #808080;
       background-color: #000000;
+      margin: 5px 0px;
     }
 
     .editbox:focus {
@@ -1226,8 +1199,12 @@
 /* new css */
 
 #tableholder1 {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  margin-top: 2px;
+  border: 2px solid #808080;
   background-color: #000040;
-  overflow: auto;
 }
 
 #container > .border10 {
@@ -1240,37 +1217,208 @@
   position: relative;
   display: flex;
   align-items: stretch;
-  top: auto;
-  left: auto;
-  right: auto;
-  bottom: auto;
+  width: 100%;
 }
 
-#playerlistbox {
-  position: relative;
-  order: 1;
-  top: auto;
-  left: auto;
-  right: auto;
-  bottom: auto;
-  height: auto;
+@media only screen and (min-width: 1025px) {
+  #playerlistbox {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    order: 1;
+    height: calc(100% - 20px);
+    margin: 10px;
+    padding: 0;
+  }
+
+  #playerlistbox > #close-button {
+    display: none;
+  }
+}
+
+@media only screen and (max-width: 1024px) {
+  #playerlistbox {
+    box-sizing: border-box;
+    position: fixed;
+    z-index: 1000;
+    margin: 0;
+    padding: 10px;
+    top: 0;
+    right: 100%;
+    bottom: 0;
+    height: 100%;
+    padding: 20px;
+    border-right: 2px solid #808080;
+    background: url(./backdrop.png) 0 0/100% 100vh no-repeat;
+  }
+
+  #container.sidebar-opened #playerlistbox {
+    transform: translateX(100%);
+  }
+
+  #container.sidebar-opened #cover {
+    display: block;
+  }
+
+  #playerlistbox > #close-button {
+    display: block;
+    position: absolute;
+    right: 0;
+    top: 0;
+    padding: 0 10px;
+    height: 41px;
+    line-height: 41px;
+  }
+}
+
+#playerlist {
+  display: block;
+  height: 100%;
+  overflow-y: scroll;
+}
+
+#channellist_mobile {
+  margin-top: 2px;
+  padding: 6px 0px;
+  border: 2px solid #808080;
+  background-color: #000040;
+}
+
+#channellist_mobile > a {
+  display: block;
+  padding: 5px;
+  border: 1px solid transparent;
+  font-size: 10pt;
+  font-weight: bold;
+  color: white;
+  text-decoration: none;
+}
+
+#channellist_mobile > a.selectedchannel {
+  color: yellow !important;
 }
 
 #leftdatabox {
   position: relative;
-  top: auto;
-  left: auto;
-  right: auto;
-  bottom: auto;
+  height: 100%;
   flex-grow: 1;
 }
 
 #entrybox {
   position: relative;
-  top: auto;
-  left: auto;
-  right: auto;
-  bottom: auto;
+  width: 100%;
+  height: 75px;
+}
+
+.entry-box {
+  display: flex;
+}
+
+@media only screen and (max-width: 1024px) {
+  #channellist {
+    display: none;
+  }
+
+  .entry-box {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .entry-field {
+    flex: 1;
+    margin: 0;
+  }
+
+  .entry-field > input {
+    box-sizing: border-box;
+    width: 100% !important;
+    height: 50px;
+    margin-bottom: 20px;
+    padding-left: 10px;
+    line-height: 50px;
+    font-size: 26px;
+  }
+
+  .entry-field:nth-child(2) > input {
+    display: none;
+  }
+
+  .entry-field:nth-child(2) > textarea {
+    box-sizing: border-box;
+    display: block;
+    width: 100%;
+    height: 100px;
+    margin-bottom: 20px;
+  }
+
+  #submit {
+    display: block;
+  }
+}
+
+@media only screen and (min-width: 1025px) {
+  .entry-field:nth-child(2) {
+    flex: 1;
+    margin: 0 2px 0 20px;
+  }
+
+  .entry-field:nth-child(2) > input {
+    display: inline-block; /* default */
+  }
+
+  .entry-field:nth-child(2) > textarea {
+    display: none;
+  }
+
+  #submit,
+  #menu-toggle {
+    display: none;
+  }
+}
+
+#submit {
+  height: 50px;
+  width: 100%;
+  margin: 0px 0 20px 0;
+  border: 1px solid #808080;
+  background: black;
+  font-size: 12pt;
+  font-weight: bold;
+  color: #fff;
+  cursor: pointer;
+  outline: none;
+}
+
+#submit:active {
+  border-color: white;
+}
+
+#close-button {
+  z-index: 100;
+  background: none;
+  border: none;
+  cursor: pointer;
+  outline: none;
+}
+
+#menu-toggle {
+  position: relative;
+  padding: 1px 10px;
+  z-index: 100;
+  background: none;
+  border: none;
+  cursor: pointer;
+  outline: none;
+}
+
+#cover {
+  display: none;
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 500;
 }
   </style>
 
@@ -1318,7 +1466,7 @@
   <style></style>
 </head>
 
-<body onload="initialise();">
+<body>
   <div id="background" onmousemove="generic_cancel(this, event);" onmousedown="generic_cancel(this, event);" onmouseup="generic_cancel(this, event);">
     <img src="./backdrop.png" width="100%" height="99%" alt="">
   </div>
@@ -1326,16 +1474,22 @@
   <div id="starspace" onmousemove="generic_cancel(this, event);" onmousedown="generic_cancel(this, event);" onmouseup="generic_cancel(this, event);"></div>
 
   <div id="container" class="fullsize">
+    <div id="cover" onclick="javascript:closeSidebar();"></div>
     <div class="border10">
       <div id="databox">
         <div id="playerlistbox">
-          <div class="border10">
+            <div class="label" onmousedown="generic_cancel(this, event);" onmouseup="generic_cancel(this, event);">Channels</div>
+            <button id="close-button" class="label" onclick="javascript:closeSidebar();">&#x2573;</button>
+            <div id="channellist_mobile" onmousedown="generic_cancel(this, event);" onmouseup="generic_cancel(this, event);">
+                <a href="javascript:void" id="AnythingGoes" class="selectedchannel">#AnythingGoes</a>
+                <a href="javascript:selectChannel(&#39;PartyTime&#39;)" id="PartyTime">#PartyTime</a>
+                <a href="javascript:selectChannel(&#39;RopersHeaven&#39;)" id="RopersHeaven">#RopersHeaven</a>
+                <a href="javascript:selectChannel(&#39;Help&#39;)" id="Help">#Help</a>
+            </div>
             <div class="label" onmousedown="generic_cancel(this, event);" onmouseup="generic_cancel(this, event);">&nbsp;</div>
             <div class="label" onmousedown="generic_cancel(this, event);" onmouseup="generic_cancel(this, event);">Players</div>
-            <div class="top40" style="background-color: #808080">
-              <div class="border1">
-                <div id="tableholder1" class="border1" onmousedown="list_mousedown(document.getElementById(&#39;playerlist&#39;), event);">
-                  <table class="datatable" width="100%" cellspacing="0" style="color: #FFFFFF; width: 203px">
+                <div id="tableholder1" onmousedown="list_mousedown(document.getElementById(&#39;playerlist&#39;), event);">
+                  <table class="datatable" width="100%" cellspacing="0" style="color: #FFFFFF; height: 100%">
                     <thead>
                       <tr class="tablecaption">
                         <td colspan="3">
@@ -1763,19 +1917,17 @@
                     </tbody>
                   </table>
                 </div>
-              </div>
-            </div>
-          </div>
         </div>
         <div id="leftdatabox">
+          <button id="menu-toggle" class="label" onclick="javascript:openSidebar();">&#x2261; Menu</button>
           <div id="gamelistbox">
             <div class="border10">
               <!--div class="label" onmousedown="generic_cancel(this, event);" onmouseup="generic_cancel(this, event);" style="color: white;" id="chanlabel">#AnythingGoes</div-->
               <div id="channellist" onmousedown="generic_cancel(this, event);" onmouseup="generic_cancel(this, event);">
                 <a href="javascript:void" id="AnythingGoes" class="selectedchannel">#AnythingGoes</a>
-                <a href="javascript:selectChannel(&#39;PartyTime&#39;)" id="PartyTime">#PartyTime</a>
-                <a href="javascript:selectChannel(&#39;RopersHeaven&#39;)" id="RopersHeaven">#RopersHeaven</a>
-                <a href="javascript:selectChannel(&#39;Help&#39;)" id="Help">#Help</a>
+                <a href="javascript:selectChannel(&#39;PartyTime&#39;); closeSidebar()" id="PartyTime">#PartyTime</a>
+                <a href="javascript:selectChannel(&#39;RopersHeaven&#39;); closeSidebar()" id="RopersHeaven">#RopersHeaven</a>
+                <a href="javascript:selectChannel(&#39;Help&#39;); closeSidebar()" id="Help">#Help</a>
               </div>
               <div class="label">&nbsp;</div>
               <div class="label" onmousedown="generic_cancel(this, event);" onmouseup="generic_cancel(this, event);">Games</div>
@@ -1816,29 +1968,18 @@
       <div id="entrybox">
         <div class="border10">
           <form action="javascript:onSend()">
-            <table width="100%" cellspacing="0">
-              <tbody>
-                <tr>
-                  <td style="width: 150px;">
-                    <span class="label" onmousedown="generic_cancel(this, event);" onmouseup="generic_cancel(this, event);">Your name:</span>
-                  </td>
-                  <td>
-                    <span class="label" onmousedown="generic_cancel(this, event);" onmouseup="generic_cancel(this, event);">Message:</span>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="width: 150px;">
-                    <input id="name" maxlength="15" class="editbox">
-                  </td>
-                  <td>
-                    <input id="message" maxlength="200" class="editbox" onkeydown="if(event.keyCode==13)onSend();">
-                  </td>
-                  <!--td style="width:  100px;">
-            <input id="send"    type="button"   class="button" value="Send" onclick="onSend()"/>
-           </td-->
-                </tr>
-              </tbody>
-            </table>
+            <div class="entry-box">
+              <div class="entry-field">
+                <div class="label" onmousedown="generic_cancel(this, event);" onmouseup="generic_cancel(this, event);">Your name:</div>
+                <input id="name" maxlength="15" class="editbox">
+              </div>
+              <div class="entry-field">
+                <div class="label" onmousedown="generic_cancel(this, event);" onmouseup="generic_cancel(this, event);">Message:</div>
+                <input id="message" maxlength="200" class="editbox" onkeydown="if(event.keyCode==13)onSend();">
+                <textarea id="message_mobile" maxlength="200" class="editbox"></textarea>
+                <button id="submit">Send</button>
+              </div>
+            </div>
           </form>
         </div>
       </div>
