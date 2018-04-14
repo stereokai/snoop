@@ -1,0 +1,1851 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<!-- saved from url=(0039)http://snoop.wormnet.net:17030/snooper/ -->
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WormNET snooper</title>
+
+  <meta name="author" content="CyberShadow">
+  <meta name="description" content="Web-based WormNET Snooper">
+  <meta name="keywords" content="WormNET, snooper, Worms, Armageddon, Worms Armageddon">
+  <link rel="shortcut icon" href="http://snoop.wormnet.net:17030/snooper/favicon.ico">
+  <script type="text/javascript">
+    <!--
+    /*if (top.frames.length > 0)
+    {
+      top.location.href = location.href;
+    }*/
+
+    // even one star brings browsers down to a crawl...
+    var starCount = 0;
+
+    var stars = new Array();
+    var starspace;
+    var noPx = document.childNodes ? 'px' : 0;
+
+    var dataRequestPeriod = 1000;
+
+    function initialiseStars() {
+      starspace = document.getElementById('starspace');
+
+      for (var i = 0; i < starCount; i++) {
+        var stardata = new Object();
+        var div = document.createElement('div');
+        stardata.pos = Math.floor(Math.random() * 128);
+
+        div.style.width = "24px";
+        div.style.height = "24px";
+        div.style.position = 'absolute';
+        div.style.overflow = 'hidden';
+        div.style['z-index'] = -1;
+        stardata.left = Math.floor(Math.random() * (starspace.clientWidth - 24));
+        stardata.top = Math.floor(Math.random() * (starspace.clientHeight - 24));
+        div.style.left = stardata.left + noPx;
+        div.style.top = stardata.top + noPx;
+
+        var img = document.createElement('img');
+        img.setAttribute('src', 'images/stars.gif');
+        //img.setAttribute('src', 'star.png');
+        img.style.position = 'absolute';
+        img.style.left = "0px";
+        img.style.top = (-24 * stardata.pos) + noPx;
+
+        div.appendChild(img);
+        starspace.appendChild(div);
+
+        stardata.div = div;
+        stardata.img = img;
+        stars[i] = stardata;
+      }
+
+      setTimeout('updatestars();', 50);
+    }
+
+    function initialise() {
+      //document.getElementById('tableholder1').style.overflow = "auto";
+      //document.getElementById('tableholder2').style.overflow = "auto";
+
+      if (starCount > 0)
+        initialiseStars();
+
+      var name = readCookie("name");
+      var loc = document.location.toString();
+      if (loc.indexOf('?') >= 0)
+        name = loc.substr(loc.indexOf('?') + 1);
+      if (name && name != null && name != "null") {
+        document.getElementById('name').value = name;
+        document.getElementById('message').focus();
+      }
+
+      messageScroller = new chatscroll.Pane(document.getElementById('messages'));
+      setDefaultChannel();
+      requestInitialData();
+    }
+
+    function updatestars() {
+      var width = starspace.clientWidth;
+      var height = starspace.clientHeight;
+
+      for (var i = 0; i < starCount; i++) {
+        var stardata = stars[i];
+        var div = stars[i].div;
+        stardata.pos = (stardata.pos + 1) % 128;
+
+        stardata.left += 8;
+        if (stardata.left > width)
+          stardata.left = -24;
+        div.style.left = stardata.left + noPx;
+
+        stardata.top += 8;
+        if (stardata.top > height)
+          stardata.top = -24;
+        div.style.top = stardata.top + noPx;
+
+        stardata.img.style.top = (-24 * stardata.pos) + noPx;
+      }
+
+      var name = document.getElementById('name').value;
+      if (name && name != "")
+        createCookie("name", name, 365);
+      else
+        eraseCookie("name");
+
+      setTimeout('updatestars();', 50);
+    }
+
+    // MISC look-and-feel
+
+    function generic_cancel(what, evt) {
+      dataRequestPeriod = 1000;
+      if (evt)
+        if (evt.preventDefault)
+          evt.preventDefault();
+    }
+
+    // TABLE lists
+
+    var ignoreDeselect = false;
+
+    function listitem_mousedown(what, evt) {
+      if (what.parentNode.selectedItem) {
+        var sel = what.parentNode.selectedItem;
+        sel.style.backgroundColor = '';
+        sel.style.color = sel.origcolor;
+      }
+      what.parentNode.selectedItem = what;
+      what.style.backgroundColor = 'red';
+      what.style.color = 'white';
+      if (evt && evt.preventDefault)
+        evt.preventDefault();
+      ignoreDeselect = 1;
+      setTimeout('ignoreDeselect=0', 1);
+      return false;
+    }
+
+    function list_mousedown(what, evt) {
+      if (evt.preventDefault)
+        evt.preventDefault();
+      if (ignoreDeselect) return;
+      if (what.selectedItem) {
+        var sel = what.selectedItem;
+        sel.style.backgroundColor = '';
+        sel.style.color = sel.origcolor;
+      }
+    }
+
+    // working with INPUT cursors
+
+    function setCaretPos(obj, pos) {
+      if (obj.createTextRange) {
+        var range = obj.createTextRange();
+        range.move('character', pos);
+        range.select();
+      } else
+      if (obj.selectionStart) {
+        obj.focus();
+        obj.setSelectionRange(pos, pos);
+      }
+    }
+
+    // cookies
+
+    function createCookie(name, value, days) {
+      if (days) {
+        var date = new Date();
+        date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+        var expires = "; expires=" + date.toGMTString();
+      } else var expires = "";
+      document.cookie = name + "=" + value + expires + "; path=/";
+    }
+
+    function readCookie(name) {
+      var nameEQ = name + "=";
+      var ca = document.cookie.split(';');
+      for (var i = 0; i < ca.length; i++) {
+        var c = ca[i];
+        while (c.charAt(0) == ' ') c = c.substring(1, c.length);
+        if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
+      }
+      return null;
+    }
+
+    function eraseCookie(name) {
+      createCookie(name, "", -1);
+    }
+
+    // escaping HTML
+
+    function htmlspecialchars(html) {
+      return html.
+      replace(/\&/gmi, '&amp;').
+      replace(/\"/gmi, '&quot;').
+      replace(/\>/gmi, '&gt;').
+      replace(/\</gmi, '&lt;');
+    }
+
+    //////////// scrolling ////////////
+
+    var messageScroller;
+
+    var chatscroll = new Object();
+
+    chatscroll.Pane = function (scrollDiv) {
+      this.bottomThreshold = 20;
+      this.scrollContainer = scrollDiv;
+      this._lastScrollPosition = 100000000;
+      this._doScroll = false;
+    }
+
+    chatscroll.Pane.prototype.beginUpdate = function () {
+
+      var _ref = this;
+      var scrollDiv = this.scrollContainer;
+      var currentHeight = 0;
+
+      var _getElementHeight = function () {
+        return parseInt(scrollDiv.style.pixelHeight ? scrollDiv.style.pixelHeight : scrollDiv.offsetHeight);
+      }
+
+      var _hasUserScrolled = function () {
+        return _ref._lastScrollPosition != null && _ref._lastScrollPosition != scrollDiv.scrollTop;
+      }
+
+      if (scrollDiv.scrollHeight > 0)
+        currentHeight = scrollDiv.scrollHeight;
+      else
+      if (scrollDiv.offsetHeight > 0)
+        currentHeight = scrollDiv.offsetHeight;
+
+      _ref._doScroll = (!_hasUserScrolled() ||
+        (currentHeight - scrollDiv.scrollTop - _getElementHeight() <= _ref.bottomThreshold));
+
+      _ref = null;
+      scrollDiv = null;
+
+    }
+
+    function doScroll(scrollDiv) {
+      //var scrollDiv = document.getElementById(id);
+      scrollDiv.scrollTop = 100000000;
+    }
+
+    chatscroll.Pane.prototype.endUpdate = function () {
+      var _ref = this;
+      var scrollDiv = this.scrollContainer;
+
+      if (_ref._doScroll)
+        // IE hack
+        //setTimeout('doScroll("' + this.scrollContainerId + '");', 10);
+        setTimeout(function () {
+          doScroll(scrollDiv);
+        }, 10);
+    }
+    //////////// channel switching ////////////
+
+    var channels = new Array();
+    var channelPlayers = new Object();
+    var channelGames = new Object();
+    var channelMessages = new Object();
+    var channelSchemes = new Object();
+
+    var activeChannel = "AnythingGoes";
+
+    function setDefaultChannel() {
+      var s = document.location.toString();
+      var i = s.indexOf('#');
+      if (i >= 0)
+        activeChannel = s.substr(i + 1);
+    }
+
+    function buildChannelList() {
+      var html = "";
+
+      for (x in channels) {
+        var name = channels[x];
+        if (name != activeChannel)
+          //html += '<a href="javascript:void(setTimeout(&quot;selectChannel(\''+name+'\')&quot;, 2000))" id="'+name+'">#'+name+'</span>';
+          html += '<a href="javascript:selectChannel(\'' + name + '\')" id="' + name + '">#' + name + '</span>';
+        else
+          html += '<a href="javascript:void" id="' + name + '" class="selectedchannel">#' + name + '</span>';
+      }
+
+      document.getElementById('channellist').innerHTML = html;
+    }
+
+    function selectChannel(newChannel) {
+      var playerlist = channelPlayers[activeChannel];
+      var gamelist = channelGames[activeChannel];
+      var messages = channelMessages[activeChannel];
+      channelPlayers[activeChannel] = playerlist.parentNode.replaceChild(channelPlayers[newChannel], playerlist);
+      channelGames[activeChannel] = gamelist.parentNode.replaceChild(channelGames[newChannel], gamelist);
+      channelMessages[activeChannel] = messages.parentNode.replaceChild(channelMessages[newChannel], messages);
+      activeChannel = newChannel;
+      buildChannelList();
+      channelMessages[activeChannel].scrollTop = 100000000;
+    }
+
+    //////////// interaction stuff ////////////
+
+    function joinGame(game) {
+      location.href = "wa://" + game.ip + ":" + game.port + "?scheme=" + channelSchemes[game.channel] + "&id=" + game.id;
+    }
+
+    function addNick(nick) {
+      var messageField = document.getElementById('message');
+      var message = messageField.value;
+      var pos = message.indexOf(": ");
+      if (pos < 0)
+        message = nick + ": " + message;
+      else
+      if (message.substring(pos - nick.length, pos) != nick)
+        message = message.substring(0, pos) + ", " + nick + message.substring(pos);
+      messageField.value = message;
+      messageField.focus();
+      setCaretPos(messageField, message.length);
+    }
+
+    var lastMessage = 0;
+    var gotData = false;
+    var xsrfKey;
+
+    /*
+            System,
+            Join,
+            Part,
+            Quit,
+            Message,
+            OwnMessage,
+            Action,
+            GameCreated,
+            GameDeleted,
+            UserInfo,
+            Reset
+    */
+
+    function appendTextSpanTo(className, text, parent) {
+      var span = document.createElement('span');
+      if (className != "")
+        span.className = className;
+      span.textContent = text;
+      span.innerText = text; // IE
+      span.appendChild(document.createElement('br'));
+      parent.appendChild(span);
+    }
+
+    function addMessageLine(className, text, outputChannels) {
+      if (outputChannels == undefined)
+        outputChannels = channels;
+
+      for (x in outputChannels)
+        appendTextSpanTo(className, text, channelMessages[outputChannels[x]]);
+    }
+
+    function logMessages(messages) {
+      if (messages.length == 0)
+        return;
+
+      messageScroller.beginUpdate();
+      for (var i = 0; i < messages.length; i++)
+        try {
+          var text = "";
+          var className;
+
+          var outputChannels = channels;
+          if (messages[i].channel)
+            outputChannels = new Array(messages[i].channel);
+          else
+          if (messages[i].channels)
+            outputChannels = messages[i].channels.split(" ");
+
+          switch (parseInt(messages[i].msgtype)) {
+            case 0: // system
+              className = "sysmessage";
+              text = "*** " + messages[i].message;
+              break;
+            case 1: // join
+              className = "sysmessage";
+              text = "** " + messages[i].user + " ** joined the channel.";
+              break;
+            case 2: // part
+              className = "sysmessage";
+              text = "** " + messages[i].user + " ** has left the channel" + (messages[i].reason == "" ? "" : " (" +
+                messages[i].reason + ")") + ".";
+              break;
+            case 3: // quit
+              className = "sysmessage";
+              text = "** " + messages[i].user + " ** has left WormNET" + (messages[i].reason == "" ? "" : " (" +
+                messages[i].reason + ")") + ".";
+              break;
+            case 4: // message
+              className = "";
+              text = messages[i].user + "> " + messages[i].message;
+              break;
+            case 5: // own message
+              className = "ownmessage";
+              text = "" + messages[i].user + ": " + messages[i].message + "";
+              break;
+            case 6: // action
+              className = "actionmessage";
+              text = "* " + messages[i].user + " " + messages[i].message + " *";
+              break;
+            case 7: // game hosted
+              if (messages[i].old == 'true')
+                continue;
+              className = "gamemessage";
+              text = ">> " + messages[i].hoster + " hosted a " + (messages[i].password == "" ? "" : "passworded ") +
+                "game (" + messages[i].name + ").";
+              break;
+            case 8: // game removed
+              className = "ungamemessage";
+              text = "<< " + messages[i].hoster + "'s game (" + messages[i].name + ") has closed.";
+              break;
+            case 9: // userinfo received
+              break;
+            case 10: // reset
+              //className = "sysmessage";
+              //text = "*** HostingBuddy server started.";
+              break;
+            case 11: // channel joined
+              className = "sysmessage";
+              text = "*** Joined #" + messages[i].channel;
+              break;
+            default:
+              className = "sysmessage";
+              text = "Unknown message type: " + messages[i].msgtype;
+              break;
+          }
+          if (text != "")
+            addMessageLine(className, text, outputChannels);
+        }
+      catch (e) {
+        addMessageLine('', "Error while logging message: " + e.message + " (" + e.description + ").<br/>Message: " +
+          objToString(messages[i]));
+      }
+      messageScroller.endUpdate();
+    }
+
+    function playMessages(messages) {
+
+      for (var i = 0; i < messages.length; i++)
+        try {
+          switch (parseInt(messages[i].msgtype)) {
+            // join
+            case 1:
+              var player = new Object();
+              player.nick = messages[i].user;
+              player.info = "";
+              player.nation = 50;
+              player.rank = 12;
+              addPlayer(messages[i].channel, player);
+              /*var row = makePlayerRow(messages[i].user, "", 50, 12);
+
+              playerlist.appendChild(row);
+              if(!playerlist.myrows)
+                playerlist.myrows = new Object();
+              playerlist.myrows[messages[i].user] = row;*/
+              break;
+              // part
+            case 2:
+              var playerlist = channelPlayers[messages[i].channel];
+              var row = playerlist.myrows[messages[i].user];
+              playerlist.removeChild(row);
+              delete playerlist.myrows[messages[i].user];
+              if (row.removeNode) row.removeNode(true);
+              break;
+              // quit
+            case 3:
+              for (channel in channelPlayers) {
+                var playerlist = channelPlayers[channel];
+                if (playerlist.myrows && (messages[i].user in playerlist.myrows)) {
+                  var row = playerlist.myrows[messages[i].user];
+                  playerlist.removeChild(row);
+                  delete playerlist.myrows[messages[i].user];
+                  if (row.removeNode) row.removeNode(true);
+                }
+              }
+              break;
+              // game hosted
+            case 7:
+              addGame(messages[i].channel, messages[i]);
+              break;
+              // game removed
+            case 8:
+              var gamelist = channelGames[messages[i].channel];
+              var row = gamelist.myrows[messages[i].id.toString()];
+              gamelist.removeChild(row);
+              delete gamelist.myrows[messages[i].id.toString()];
+              if (row.removeNode) row.removeNode(true);
+              break;
+              // got user info
+            case 9:
+              for (channel in channelPlayers) {
+                var playerlist = channelPlayers[channel];
+                if (playerlist.myrows && (messages[i].name in playerlist.myrows)) {
+                  var row = playerlist.myrows[messages[i].name];
+                  //var newRow = makePlayerRow(messages[i].name, messages[i].info, messages[i].nation, messages[i].rank);
+                  //playerlist.insertBefore(newRow, row);
+                  playerlist.removeChild(row);
+                  if (row.removeNode) row.removeNode(true);
+                  //playerlist.myrows[messages[i].name] = newRow;
+                  messages[i].nick = messages[i].name; // a misnomer
+                  addPlayer(channel, messages[i]);
+                }
+              }
+              break;
+              // reset
+            case 10:
+              document.location = document.location;
+              break;
+          }
+        }
+      catch (e) {
+        addMessageLine("", "Error while parsing message: " + e.message + " (" + e.description + ").<br/>Message: " +
+          objToString(messages[i]));
+      }
+    }
+
+    function makeRow(data, widths) {
+      var row = document.createElement('tr');
+      //row.setAttribute('onmousedown', 'return listitem_mousedown(this, event);');
+      row.onmousedown = function () {
+        return listitem_mousedown(row, null);
+      };
+      //row.onmousedown = 'alert("aoeu");';
+      for (var i = 0; i < data.length; i++) {
+        var cell = document.createElement('td')
+        if (widths[i] > 0)
+          cell.style.width = widths[i] + noPx;
+        cell.innerHTML = data[i];
+        row.appendChild(cell);
+      }
+      return row;
+    }
+
+    function addGame(channel, game) {
+      //var gamelist = document.getElementById('gamelist');
+      var gamelist = channelGames[channel];
+      var row = makeRow(
+        [
+          '<div class="padlock"><img src="images/nopadlock.gif" alt="Padlock" style="position: absolute; top: 0px; left: ' +
+          ((game.password != "") ? "-16" : "0") + 'px;"/><' + '/div>',
+          '<div class="flag"><img src="images/nationflags.png" alt="Nation flag" style="position: absolute; top: -1px; left: ' +
+          (game.location * -22 - 1) + 'px;"/><' + '/div>',
+          htmlspecialchars(game.name), htmlspecialchars(game.hoster)
+        ], [16, 24, 0, 0]);
+
+      //row.game = game;
+      row.ondblclick = function () {
+        return joinGame(game);
+      };
+      row.title = "#" + game.id + " - " + game.ip + ":" + game.port;
+
+      if (game.password != "")
+        row.style.color = "#FFFF00";
+      if (row.style.color)
+        row.origcolor = row.style.color;
+      else
+        row.origcolor = '';
+      row.gamerow = 1;
+
+      var firstGame = gamelist.firstChild;
+      while (firstGame && !firstGame.gamerow)
+        firstGame = firstGame.nextSibling;
+      gamelist.insertBefore(row, firstGame);
+
+      if (!gamelist.myrows)
+        gamelist.myrows = new Object();
+      gamelist.myrows[game.id.toString()] = row;
+    }
+
+    var countryNames = [
+      "United Kingdom", "Argentina", "Australia", "Austria", "Belgium", "Brazil", "Canada", "Croatia", "Bosnia",
+      "Cyprus", "Czech Republic", "Denmark", "Finland", "France",
+      "Georgia", "Germany", "Greece", "Hong Kong", "Hungary", "Iceland", "India", "Indonesia", "Iran", "Iraq",
+      "Ireland", "Israel", "Italy", "Japan",
+      "Leichtenstein", "Luxembourg", "Malaysia", "Malta", "Mexico", "Morocco", "Netherlands", "New Zealand", "Norway",
+      "Poland", "Portugal", "Puerto Rico", "Romania",
+      "Russia", "Singapore", "South Africa", "Spain", "Sweden", "Switzerland", "Turkey", "United States", "Unknown",
+      "RedFlag1", "RedFlag2", "RedFlag3",
+      "Chile", "Serbia", "Slovenia", "Lebanon", "Moldova", "Ukraine", "Latvia", "Slovakia", "Costa Rica", "Estonia",
+      "China", "Colombia", "Ecuador", "Uruguay", "Venezuela",
+      "Lithuania", "Bulgaria", "Egypt", "Saudi Arabia", "South Korea", "Belarus", "Peru", "Algeria", "Kazakhstan",
+      "El Salvador", "Taiwan", "Jamaica", "Guatemala",
+      "Marshall Islands", "Macedonia", "United Arab Emirates"
+    ];
+
+    function makePlayerRow(nick, info, location, rank) {
+      if (isNaN(location))
+        location = 50;
+      if (location < 1 || location >= countryNames.length + 1)
+        location = 50;
+      if (isNaN(rank))
+        rank = 12;
+      if (rank < 0 || rank > 13)
+        rank = 12;
+
+      var row = makeRow(
+        [
+          '<div class="flag"><img src="images/nationflags.png" alt="Nation flag" style="position: absolute; top: -1px; left: ' +
+          ((location - 1) * -22 - 1) + 'px;"/><' + '/div>',
+          '<div class="rank"><img src="images/rankstrip.gif" alt="Rank" style="position: absolute; top: ' + (rank * -
+            17) + 'px; left: 0px;"/><' + '/div>',
+          htmlspecialchars(nick)
+        ], [24, 48, 0]);
+      row.ondblclick = function () {
+        return addNick(nick);
+      };
+      row.origcolor = '';
+      row.title = countryNames[location - 1] + (info ? ' (' + info + ')' : '');
+      row.nick = nick; // for sorting
+      row.isSnooper = rank == 13;
+      return row;
+    }
+
+    function addPlayer(channel, player) {
+      //var playerlist = document.getElementById('playerlist');
+      var playerlist = channelPlayers[channel];
+      var row = makePlayerRow(player.nick, player.info, player.nation, player.rank);
+
+      //playerlist.appendChild(row);
+      var node;
+      for (node = playerlist.firstChild; node != null && (node.nick == undefined || (node.isSnooper < row.isSnooper ||
+          (node.isSnooper == row.isSnooper && node.nick.toLowerCase() < row.nick.toLowerCase()))); node = node.nextSibling)
+      ;
+      //if (node)
+      //opera.postError("=== Inserting "+row.nick+" before "+(node?node.nick:"null") + ": x=" + (node!=null?"true":"false") + " && (" + (node.nick==undefined?"true":"false") + " || (" + (node.isSnooper<row.isSnooper?"true":"false") + " || (" + (node.isSnooper==row.isSnooper?"true":"false") + " && " + (node.nick.toLowerCase() < row.nick.toLowerCase()?"true":"false") + ")))" + " ===");
+      playerlist.insertBefore(row, node);
+      if (!playerlist.myrows)
+        playerlist.myrows = new Object();
+      playerlist.myrows[player.nick] = row;
+    }
+
+    function processData(data) {
+      var obj = eval('(' + data + ')');
+      lastMessage = obj.last;
+
+      if (!gotData)
+        document.getElementById('messages').innerHTML = "";
+
+      if (obj.channels) {
+        var playerlist = document.getElementById('playerlist');
+        var gamelist = document.getElementById('gamelist');
+        var messages = document.getElementById('messages');
+
+        var activeChannelFound = false;
+        for (x in obj.channels)
+          if (obj.channels[x].name == activeChannel)
+            activeChannelFound = true;
+        if (!activeChannelFound)
+          activeChannel = obj.channels[0].name;
+
+        for (x in obj.channels) {
+          var channel = obj.channels[x];
+          var name = channel.name;
+          channels[x] = name;
+          if (name == activeChannel) {
+            channelPlayers[name] = playerlist;
+            channelGames[name] = gamelist;
+            channelMessages[name] = messages;
+          } else {
+            channelPlayers[name] = playerlist.cloneNode(true);
+            channelGames[name] = gamelist.cloneNode(true);
+            channelMessages[name] = messages.cloneNode(true);
+          }
+        }
+
+        buildChannelList();
+
+        for (x in obj.channels) {
+          var channel = obj.channels[x];
+          var name = channel.name;
+          channels[x] = name;
+          channelSchemes[name] = channel.scheme;
+
+          if (channel.games)
+            for (var i = 0; i < channel.games.length; i++)
+              addGame(name, channel.games[i]);
+
+          if (channel.players)
+            for (var i = 0; i < channel.players.length; i++)
+              addPlayer(name, channel.players[i]);
+        }
+      }
+      logMessages(obj.messages);
+      if (gotData)
+        playMessages(obj.messages);
+      if (obj.key)
+        xsrfKey = obj.key;
+
+      gotData = true;
+    }
+
+    function requestInitialData() {
+      asyncRequest("/data/initinfo?");
+    }
+
+    function requestData() {
+      asyncRequest("/data/messages?" + lastMessage);
+    }
+
+    function scheduleDataRequest() {
+      // the request period will reach 10 seconds within 50 minutes of inactivity
+      dataRequestPeriod += 3;
+      if (dataRequestPeriod > 10000)
+        dataRequestPeriod = 10000;
+      setTimeout('requestData();', dataRequestPeriod);
+    }
+
+    var sentMessage = "";
+
+    function onSend() {
+      dataRequestPeriod = 1000;
+      var name = document.getElementById('name').value;
+      var message = document.getElementById('message').value;
+      if (message == "")
+        return;
+      else
+      if (name == "")
+        alert("Please enter a nickname.");
+      else
+      if (name.length < 3)
+        alert("Your nickname is too short...");
+      else
+      if (name.length > 15)
+        alert("Your nickname is too long...");
+      else
+      if (name.length > 200)
+        alert("Your message is too long...");
+      else {
+        for (var i = 0; i < name.length; i++) {
+          var c = name.charAt(i);
+          if (!((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '_' || c ==
+              '`')) {
+            alert("Your nickname contains invalid characters.");
+            return;
+          }
+        }
+        asyncSend('/data/message?' + activeChannel + '|' + xsrfKey, name + '|' + message);
+        sentMessage = message;
+        document.getElementById('message').value = "";
+        //alert('All OK.');
+      }
+      document.getElementById("message").focus();
+    }
+
+    //////////// XMLHTTP stuff ////////////
+
+    function logError(msg) {
+      messageScroller.beginUpdate();
+      if (channels.length == 0) {
+        //alert(msg);
+        appendTextSpanTo("", msg, document.getElementById('messages'));
+      } else {
+        addMessageLine("", msg);
+      }
+      messageScroller.endUpdate();
+    }
+
+    function objToString(o) {
+      var s = "";
+      for (var property in o)
+        s += property + "=" + o[property] + "<br/>\n";
+      return s;
+    }
+
+    function processReqChange(req) {
+      try {
+        if (req.readyState == 4) {
+          if (req.status == 200) {
+            try {
+              processData(req.responseText);
+            } catch (e) {
+              logError("Exception while processing data: " + e.message + " (" + e.description + ")");
+            }
+          } else {
+            if (req.status == 0 || req.status == 12029)
+              logError("Network error");
+            else
+              logError("Server error " + req.status + " (\"" + req.statusText + "\")");
+          }
+          scheduleDataRequest();
+        }
+      } catch (e) {
+        logError("XMLHttpRequest StateChange[" + req.readyState + "] exception: " + e.message + " (" + e.description +
+          ")");
+        scheduleDataRequest();
+      }
+    }
+
+    function processSendChange(req) {
+      try {
+        if (req.readyState == 4) {
+          if (req.status == 200) {
+            var text = req.responseText;
+            if (text != "") {
+              if (sentMessage != "")
+                document.getElementById('message').value = sentMessage;
+              sentMessage = "";
+              alert(text);
+              document.getElementById('message').focus();
+              document.getElementById('message').select();
+            }
+          } else {
+            logError("XMLHttpRequest post StateChange error: " + req.statusText);
+          }
+        }
+      } catch (e) {
+        logError("XMLHttpRequest post StateChange exception: " + e.message + " (" + e.description + ")");
+        //logError("Status="+req.readyState);
+      }
+    }
+
+    function makeXMLHTTP() {
+      // branch for native XMLHttpRequest object
+      if (window.XMLHttpRequest) {
+        return new XMLHttpRequest();
+      } else
+        // branch for IE/Windows ActiveX version
+        if (window.ActiveXObject) {
+          try {
+            return new ActiveXObject("Msxml2.XMLHTTP");
+          } catch (e) {
+            return new ActiveXObject("Microsoft.XMLHTTP");
+          }
+        }
+    }
+
+    function asyncRequest(url) {
+      var req = false;
+      var errorMessage = "unknown";
+      try {
+        req = makeXMLHTTP();
+      } catch (e) {
+        errorMessage = e.message + "(" + e.description + ")"
+      }
+      if (req) {
+        req.onreadystatechange = function () {
+          processReqChange(req);
+        };
+        req.open("GET", 'http://snoop.wormnet.net/' + url, true);
+        req.send("");
+      } else {
+        logError("XMLHttpRequest error: " + errorMessage);
+      }
+    }
+
+    function asyncSend(url, data) {
+      var req = false;
+      var errorMessage = "unknown";
+      try {
+        req = makeXMLHTTP();
+      } catch (e) {
+        errorMessage = e.message + "(" + e.description + ")"
+      }
+      if (req) {
+        req.onreadystatechange = function () {
+          processSendChange(req);
+        };
+        req.open("POST", url, true);
+        req.send(data);
+      } else {
+        logError("XMLHttpRequest error: " + errorMessage);
+      }
+    }
+
+    // -->
+  </script>
+  <style type="text/css">
+    html,
+    body {
+      height: 100%;
+      padding: 0;
+      margin: 0;
+      border-width: 0;
+      overflow: hidden;
+
+      font-family: Tahoma, sans-serif;
+    }
+
+    html,
+    body,
+    div {
+      scrollbar-base-color: #000000;
+      scrollbar-arrow-color: #000000;
+      scrollbar-3dlight-color: #000000;
+      scrollbar-darkshadow-color: #000000;
+      scrollbar-face-color: #FEB6A8;
+      scrollbar-highlight-color: #000000;
+      scrollbar-shadow-color: #000000;
+      scrollbar-track-color: #404040;
+    }
+
+    img {
+      display: block;
+    }
+
+    #background {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -2;
+      background-color: #00008C;
+    }
+
+    #starspace {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      overflow: hidden;
+    }
+
+    .fullsize {
+      position: absolute;
+      left: 0px;
+      top: 0px;
+      right: 0px;
+      bottom: 0px;
+      width: 100%;
+      height: 100%;
+    }
+
+    .border10 {
+      position: absolute;
+      left: 10px;
+      top: 10px;
+      right: 10px;
+      bottom: 10px;
+    }
+
+    .border1 {
+      position: absolute;
+      left: 1px;
+      top: 1px;
+      right: 1px;
+      bottom: 1px;
+    }
+
+    .top20 {
+      position: absolute;
+      left: 0px;
+      top: 20px;
+      right: 0px;
+      bottom: 0px;
+      width: 100%;
+    }
+
+    .top40 {
+      position: absolute;
+      left: 0px;
+      top: 40px;
+      right: 0px;
+      bottom: 0px;
+      width: 100%;
+    }
+
+    #databox {
+      position: absolute;
+      left: 0px;
+      top: 0px;
+      right: 0px;
+      bottom: 75px;
+      width: 100%;
+    }
+
+    #leftdatabox {
+      position: absolute;
+      top: 0px;
+      bottom: 0px;
+      left: 0px;
+      right: 245px;
+      height: 100%;
+    }
+
+    #gamelistbox {
+      position: absolute;
+      top: 0px;
+      left: 0px;
+      right: 0px;
+      width: 100%;
+      height: 40%;
+    }
+
+    #chatbox {
+      position: absolute;
+      bottom: 0px;
+      left: 0px;
+      right: 0px;
+      width: 100%;
+      height: 60%;
+    }
+
+    #playerlistbox {
+      position: absolute;
+      top: 0px;
+      bottom: 0px;
+      right: 0px;
+      width: 245px;
+      height: 100%;
+    }
+
+    #entrybox {
+      position: absolute;
+      left: 0px;
+      right: 0px;
+      bottom: 0px;
+      width: 100%;
+      height: 75px;
+    }
+
+    #channellist {
+      font-size: 10pt;
+      font-weight: bold;
+      border: 2px solid #808080;
+      padding: 3px 0px 3px 0px;
+      background-color: #000040;
+      /* float: right; */
+      position: absolute;
+      top: 0;
+      right: 0;
+    }
+
+    #channellist a {
+      color: white;
+      /*margin-right: 10px;*/
+      padding: 2px 5px 2px 5px;
+      text-decoration: none;
+      border: 1px solid transparent;
+    }
+
+    #channellist a:hover {
+      background-color: red;
+      border: 1px dotted #808080;
+    }
+
+    .selectedchannel {
+      color: yellow !important;
+    }
+
+    .selectedchannel:hover {
+      /* color: white !important; */
+    }
+
+    .label {
+      font-size: 12pt;
+      font-weight: bold;
+      color: yellow;
+      cursor: default;
+    }
+
+    .datatable {
+      border-spacing: 0;
+      background-color: #000040;
+      font-size: 10pt;
+      color: #FFBFBF;
+      cursor: default;
+    }
+
+    .tablecaption {
+      color: #808080;
+    }
+
+    .tablecaption td {
+      border-width: 1px;
+      border-style: solid;
+      border-color: #808080;
+      background-color: #000000;
+    }
+
+    .tablecaption td:hover {
+      border-color: #FFFFFF;
+    }
+
+    .tablecaption td:active {
+      border-color: #FFFF00;
+      background-color: #000040;
+    }
+
+    .tablecaption td:active:hover {
+      border-color: #FFFF00;
+      background-color: #000040;
+    }
+
+    .padlock {
+      position: relative;
+      left: 1px;
+      top: -1px;
+      width: 16px;
+      height: 16px;
+      overflow: hidden;
+    }
+
+    .flag {
+      position: relative;
+      top: 0px;
+      left: 2px;
+      width: 20px;
+      height: 16px;
+      overflow: hidden;
+    }
+
+    .rank {
+      position: relative;
+      top: -1px;
+      left: -1px;
+      width: 48px;
+      height: 17px;
+      overflow: hidden;
+    }
+
+    #messages {
+      background-color: #000040;
+      overflow: auto;
+      font-size: 10pt;
+      color: #808080;
+
+      white-space: pre-wrap;
+      /* css-3 */
+      white-space: -moz-pre-wrap !important;
+      /* Mozilla, since 1999 */
+      white-space: -pre-wrap;
+      /* Opera 4-6 */
+      white-space: -o-pre-wrap;
+      /* Opera 7 */
+      word-wrap: break-word;
+      /* Internet Explorer 5.5+ */
+    }
+
+    .sysmessage {
+      color: #BF0000;
+    }
+
+    .ownmessage {
+      color: #FFFFFF;
+    }
+
+    .actionmessage {
+      color: #00CF00;
+    }
+
+    .gamemessage {
+      color: #00A080;
+    }
+
+    .ungamemessage {
+      color: #006040;
+    }
+
+    input {
+      border-width: 1px;
+      border-style: solid;
+      border-color: #808080;
+      background-color: #000000;
+      color: #808080;
+    }
+
+    #name {
+      width: 130px;
+    }
+
+    #message {
+      width: 100%;
+    }
+
+    .editbox {
+      border-color: #808080;
+      color: #808080;
+      background-color: #000000;
+    }
+
+    .editbox:focus {
+      border-color: #FFFF00;
+      color: #FFFFFF;
+      background-color: #000040;
+    }
+
+    .editbox:hover {
+      border-color: #FFFFFF;
+    }
+
+    .editbox:focus:hover {
+      border-color: #FFFF00;
+    }
+
+    #send {
+      width: 80px;
+      float: right;
+    }
+
+    .button {
+      border-color: #808080;
+      border-width: 2px;
+      color: #808080;
+      background-color: #000000;
+    }
+
+    .button:active {
+      border-color: #FFFF00;
+      color: #FFFFFF;
+      background-color: #000040;
+    }
+
+    .button:hover {
+      border-color: #FFFFFF;
+    }
+
+    .button:active:hover {
+      border-color: #FFFF00;
+    }
+
+/* new css */
+
+#tableholder1 {
+  background-color: #000040;
+  overflow: auto;
+}
+
+#container > .border10 {
+  display: flex;
+  flex-direction: column;
+}
+
+#databox {
+  height: calc(100% - 75px);
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  top: auto;
+  left: auto;
+  right: auto;
+  bottom: auto;
+}
+
+#playerlistbox {
+  position: relative;
+  order: 1;
+  top: auto;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  height: auto;
+}
+
+#leftdatabox {
+  position: relative;
+  top: auto;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  flex-grow: 1;
+}
+
+#entrybox {
+  position: relative;
+  top: auto;
+  left: auto;
+  right: auto;
+  bottom: auto;
+}
+  </style>
+
+  <!--[if IE]>
+    <style>
+      .border10
+      {
+        width:    expression((parentElement.clientWidth  - 20) + "px");
+        height:   expression((parentElement.clientHeight - 20) + "px");
+      }
+
+      .border1
+      {
+        width:    expression((parentElement.clientWidth  - 2) + "px");
+        height:   expression((parentElement.clientHeight - 2) + "px");
+      }
+
+      .top20
+      {
+        height:   expression((parentElement.clientHeight - 20) + "px");
+      }
+
+      .top40
+      {
+        height:   expression((parentElement.clientHeight - 40) + "px");
+      }
+
+      #databox
+      {
+        height:   expression((parentElement.clientHeight - 75) + "px");
+      }
+
+      #leftdatabox
+      {
+        width:    expression((parentElement.clientWidth  - 245) + "px");
+      }
+
+      #message
+      {
+        width:    expression((entrybox.clientWidth  - 175) + "px");
+      }
+    </style>
+<![endif]-->
+
+  <style></style>
+</head>
+
+<body onload="initialise();">
+  <div id="background" onmousemove="generic_cancel(this, event);" onmousedown="generic_cancel(this, event);" onmouseup="generic_cancel(this, event);">
+    <img src="./backdrop.png" width="100%" height="99%" alt="">
+  </div>
+  <!--don't add spaces in this line or else IE pops up extra scroll-bars-->
+  <div id="starspace" onmousemove="generic_cancel(this, event);" onmousedown="generic_cancel(this, event);" onmouseup="generic_cancel(this, event);"></div>
+
+  <div id="container" class="fullsize">
+    <div class="border10">
+      <div id="databox">
+        <div id="playerlistbox">
+          <div class="border10">
+            <div class="label" onmousedown="generic_cancel(this, event);" onmouseup="generic_cancel(this, event);">&nbsp;</div>
+            <div class="label" onmousedown="generic_cancel(this, event);" onmouseup="generic_cancel(this, event);">Players</div>
+            <div class="top40" style="background-color: #808080">
+              <div class="border1">
+                <div id="tableholder1" class="border1" onmousedown="list_mousedown(document.getElementById(&#39;playerlist&#39;), event);">
+                  <table class="datatable" width="100%" cellspacing="0" style="color: #FFFFFF; width: 203px">
+                    <thead>
+                      <tr class="tablecaption">
+                        <td colspan="3">
+                          Name
+                        </td>
+                      </tr>
+                    </thead>
+                    <tbody id="playerlist">
+                      <tr title="Germany (15 0 DE 3.7.2.1 (Steam) )">
+                        <td style="width: 24px;">
+                          <div class="flag">
+                            <img src="./nationflags.png" alt="Nation flag" style="position: absolute; top: -1px; left: -331px;">
+                          </div>
+                        </td>
+                        <td style="width: 48px;">
+                          <div class="rank">
+                            <img src="./rankstrip.gif" alt="Rank" style="position: absolute; top: 0px; left: 0px;">
+                          </div>
+                        </td>
+                        <td>booom</td>
+                      </tr>
+                      <tr title="United Kingdom (0 0 ?? 3.7.2.1 )">
+                        <td style="width: 24px;">
+                          <div class="flag">
+                            <img src="./nationflags.png" alt="Nation flag" style="position: absolute; top: -1px; left: -1px;">
+                          </div>
+                        </td>
+                        <td style="width: 48px;">
+                          <div class="rank">
+                            <img src="./rankstrip.gif" alt="Rank" style="position: absolute; top: 0px; left: 0px;">
+                          </div>
+                        </td>
+                        <td>Rvydo</td>
+                      </tr>
+                      <tr title="Unknown (49 0 CI 3.7.2.1 )">
+                        <td style="width: 24px;">
+                          <div class="flag">
+                            <img src="./nationflags.png" alt="Nation flag" style="position: absolute; top: -1px; left: -1079px;">
+                          </div>
+                        </td>
+                        <td style="width: 48px;">
+                          <div class="rank">
+                            <img src="./rankstrip.gif" alt="Rank" style="position: absolute; top: 0px; left: 0px;">
+                          </div>
+                        </td>
+                        <td>Shulgin</td>
+                      </tr>
+                      <tr title="United States (48 13 ?? 3.7.2.1)">
+                        <td style="width: 24px;">
+                          <div class="flag">
+                            <img src="./nationflags.png" alt="Nation flag" style="position: absolute; top: -1px; left: -1057px;">
+                          </div>
+                        </td>
+                        <td style="width: 48px;">
+                          <div class="rank">
+                            <img src="./rankstrip.gif" alt="Rank" style="position: absolute; top: -221px; left: 0px;">
+                          </div>
+                        </td>
+                        <td>bazzy</td>
+                      </tr>
+                      <tr title="Russia (41 13 RU The Wheat Snooper 2.9.3)">
+                        <td style="width: 24px;">
+                          <div class="flag">
+                            <img src="./nationflags.png" alt="Nation flag" style="position: absolute; top: -1px; left: -903px;">
+                          </div>
+                        </td>
+                        <td style="width: 48px;">
+                          <div class="rank">
+                            <img src="./rankstrip.gif" alt="Rank" style="position: absolute; top: -221px; left: 0px;">
+                          </div>
+                        </td>
+                        <td>BlackSun</td>
+                      </tr>
+                      <tr title="Unknown (ChanServ)">
+                        <td style="width: 24px;">
+                          <div class="flag">
+                            <img src="./nationflags.png" alt="Nation flag" style="position: absolute; top: -1px; left: -1079px;">
+                          </div>
+                        </td>
+                        <td style="width: 48px;">
+                          <div class="rank">
+                            <img src="./rankstrip.gif" alt="Rank" style="position: absolute; top: -221px; left: 0px;">
+                          </div>
+                        </td>
+                        <td>ChanServ</td>
+                      </tr>
+                      <tr title="Finland (12 12 FI irssi 0.8.15 (20100403 1617))">
+                        <td style="width: 24px;">
+                          <div class="flag">
+                            <img src="./nationflags.png" alt="Nation flag" style="position: absolute; top: -1px; left: -265px;">
+                          </div>
+                        </td>
+                        <td style="width: 48px;">
+                          <div class="rank">
+                            <img src="./rankstrip.gif" alt="Rank" style="position: absolute; top: -221px; left: 0px;">
+                          </div>
+                        </td>
+                        <td>DataLate`irssi</td>
+                      </tr>
+                      <tr title="Germany (15 7 DE Great Snooper v2.2)">
+                        <td style="width: 24px;">
+                          <div class="flag">
+                            <img src="./nationflags.png" alt="Nation flag" style="position: absolute; top: -1px; left: -331px;">
+                          </div>
+                        </td>
+                        <td style="width: 48px;">
+                          <div class="rank">
+                            <img src="./rankstrip.gif" alt="Rank" style="position: absolute; top: -221px; left: 0px;">
+                          </div>
+                        </td>
+                        <td>Don</td>
+                      </tr>
+                      <tr title="United Kingdom (0 4294967309 NL ZNC)">
+                        <td style="width: 24px;">
+                          <div class="flag">
+                            <img src="./nationflags.png" alt="Nation flag" style="position: absolute; top: -1px; left: -1px;">
+                          </div>
+                        </td>
+                        <td style="width: 48px;">
+                          <div class="rank">
+                            <img src="./rankstrip.gif" alt="Rank" style="position: absolute; top: -221px; left: 0px;">
+                          </div>
+                        </td>
+                        <td>dpc`IRC</td>
+                      </tr>
+                      <tr title="Canada (6 13 CA Great Snooper v2.2)">
+                        <td style="width: 24px;">
+                          <div class="flag">
+                            <img src="./nationflags.png" alt="Nation flag" style="position: absolute; top: -1px; left: -133px;">
+                          </div>
+                        </td>
+                        <td style="width: 48px;">
+                          <div class="rank">
+                            <img src="./rankstrip.gif" alt="Rank" style="position: absolute; top: -221px; left: 0px;">
+                          </div>
+                        </td>
+                        <td>FirstNations</td>
+                      </tr>
+                      <tr title="United Kingdom (0 4294967309 UK eggdrop (owner: Byte))">
+                        <td style="width: 24px;">
+                          <div class="flag">
+                            <img src="./nationflags.png" alt="Nation flag" style="position: absolute; top: -1px; left: -1px;">
+                          </div>
+                        </td>
+                        <td style="width: 48px;">
+                          <div class="rank">
+                            <img src="./rankstrip.gif" alt="Rank" style="position: absolute; top: -221px; left: 0px;">
+                          </div>
+                        </td>
+                        <td>FullWormage</td>
+                      </tr>
+                      <tr title="Unknown (49 11 SCO The Wheat Snooper 2.8)">
+                        <td style="width: 24px;">
+                          <div class="flag">
+                            <img src="./nationflags.png" alt="Nation flag" style="position: absolute; top: -1px; left: -1079px;">
+                          </div>
+                        </td>
+                        <td style="width: 48px;">
+                          <div class="rank">
+                            <img src="./rankstrip.gif" alt="Rank" style="position: absolute; top: -221px; left: 0px;">
+                          </div>
+                        </td>
+                        <td>Grizzly`</td>
+                      </tr>
+                      <tr title="Germany (15 13 DE Great Snooper v2.2)">
+                        <td style="width: 24px;">
+                          <div class="flag">
+                            <img src="./nationflags.png" alt="Nation flag" style="position: absolute; top: -1px; left: -331px;">
+                          </div>
+                        </td>
+                        <td style="width: 48px;">
+                          <div class="rank">
+                            <img src="./rankstrip.gif" alt="Rank" style="position: absolute; top: -221px; left: 0px;">
+                          </div>
+                        </td>
+                        <td>HellsXAdvocat55</td>
+                      </tr>
+                      <tr title="United Kingdom (0 4294967309 UK The friendly WormNET help bot :))">
+                        <td style="width: 24px;">
+                          <div class="flag">
+                            <img src="./nationflags.png" alt="Nation flag" style="position: absolute; top: -1px; left: -1px;">
+                          </div>
+                        </td>
+                        <td style="width: 48px;">
+                          <div class="rank">
+                            <img src="./rankstrip.gif" alt="Rank" style="position: absolute; top: -221px; left: 0px;">
+                          </div>
+                        </td>
+                        <td>Help</td>
+                      </tr>
+                      <tr title="France (13 0 FR HostingBuddy)">
+                        <td style="width: 24px;">
+                          <div class="flag">
+                            <img src="./nationflags.png" alt="Nation flag" style="position: absolute; top: -1px; left: -287px;">
+                          </div>
+                        </td>
+                        <td style="width: 48px;">
+                          <div class="rank">
+                            <img src="./rankstrip.gif" alt="Rank" style="position: absolute; top: -221px; left: 0px;">
+                          </div>
+                        </td>
+                        <td>HostingBuddy</td>
+                      </tr>
+                      <tr title="Russia (41 13 RU The Wheat Snooper 2.9.3)">
+                        <td style="width: 24px;">
+                          <div class="flag">
+                            <img src="./nationflags.png" alt="Nation flag" style="position: absolute; top: -1px; left: -903px;">
+                          </div>
+                        </td>
+                        <td style="width: 48px;">
+                          <div class="rank">
+                            <img src="./rankstrip.gif" alt="Rank" style="position: absolute; top: -221px; left: 0px;">
+                          </div>
+                        </td>
+                        <td>mazzzanakizzz</td>
+                      </tr>
+                      <tr title="United Kingdom (0 4294967309 GB Xchat2)">
+                        <td style="width: 24px;">
+                          <div class="flag">
+                            <img src="./nationflags.png" alt="Nation flag" style="position: absolute; top: -1px; left: -1px;">
+                          </div>
+                        </td>
+                        <td style="width: 48px;">
+                          <div class="rank">
+                            <img src="./rankstrip.gif" alt="Rank" style="position: absolute; top: -221px; left: 0px;">
+                          </div>
+                        </td>
+                        <td>Muzer</td>
+                      </tr>
+                      <tr title="Russia (41 13 RU The Wheat Snooper 2.9.3)">
+                        <td style="width: 24px;">
+                          <div class="flag">
+                            <img src="./nationflags.png" alt="Nation flag" style="position: absolute; top: -1px; left: -903px;">
+                          </div>
+                        </td>
+                        <td style="width: 48px;">
+                          <div class="rank">
+                            <img src="./rankstrip.gif" alt="Rank" style="position: absolute; top: -221px; left: 0px;">
+                          </div>
+                        </td>
+                        <td>NumberOne</td>
+                      </tr>
+                      <tr title="Macedonia (49 13 MK Great Snooper v2.2)">
+                        <td style="width: 24px;">
+                          <div class="flag">
+                            <img src="./nationflags.png" alt="Nation flag" style="position: absolute; top: -1px; left: -1805px;">
+                          </div>
+                        </td>
+                        <td style="width: 48px;">
+                          <div class="rank">
+                            <img src="./rankstrip.gif" alt="Rank" style="position: absolute; top: -221px; left: 0px;">
+                          </div>
+                        </td>
+                        <td>pilau</td>
+                      </tr>
+                      <tr title="Unknown (49 13 UN Great Snooper v2.2)">
+                        <td style="width: 24px;">
+                          <div class="flag">
+                            <img src="./nationflags.png" alt="Nation flag" style="position: absolute; top: -1px; left: -1079px;">
+                          </div>
+                        </td>
+                        <td style="width: 48px;">
+                          <div class="rank">
+                            <img src="./rankstrip.gif" alt="Rank" style="position: absolute; top: -221px; left: 0px;">
+                          </div>
+                        </td>
+                        <td>Pixy2</td>
+                      </tr>
+                      <tr title="United Kingdom (0 13 GB Great Snooper v2.2)">
+                        <td style="width: 24px;">
+                          <div class="flag">
+                            <img src="./nationflags.png" alt="Nation flag" style="position: absolute; top: -1px; left: -1px;">
+                          </div>
+                        </td>
+                        <td style="width: 48px;">
+                          <div class="rank">
+                            <img src="./rankstrip.gif" alt="Rank" style="position: absolute; top: -221px; left: 0px;">
+                          </div>
+                        </td>
+                        <td>Pokemon</td>
+                      </tr>
+                      <tr title="Russia (41 0 RU 3.7.2.1  )">
+                        <td style="width: 24px;">
+                          <div class="flag">
+                            <img src="./nationflags.png" alt="Nation flag" style="position: absolute; top: -1px; left: -903px;">
+                          </div>
+                        </td>
+                        <td style="width: 48px;">
+                          <div class="rank">
+                            <img src="./rankstrip.gif" alt="Rank" style="position: absolute; top: -221px; left: 0px;">
+                          </div>
+                        </td>
+                        <td>Requin</td>
+                      </tr>
+                      <tr title="South Africa (43 3 ZA Great Snooper v2.2)">
+                        <td style="width: 24px;">
+                          <div class="flag">
+                            <img src="./nationflags.png" alt="Nation flag" style="position: absolute; top: -1px; left: -947px;">
+                          </div>
+                        </td>
+                        <td style="width: 48px;">
+                          <div class="rank">
+                            <img src="./rankstrip.gif" alt="Rank" style="position: absolute; top: -221px; left: 0px;">
+                          </div>
+                        </td>
+                        <td>Riaan-Marais</td>
+                      </tr>
+                      <tr title="Unknown (49 13 KE The Wheat Snooper 2.8)">
+                        <td style="width: 24px;">
+                          <div class="flag">
+                            <img src="./nationflags.png" alt="Nation flag" style="position: absolute; top: -1px; left: -1079px;">
+                          </div>
+                        </td>
+                        <td style="width: 48px;">
+                          <div class="rank">
+                            <img src="./rankstrip.gif" alt="Rank" style="position: absolute; top: -221px; left: 0px;">
+                          </div>
+                        </td>
+                        <td>saltyk9</td>
+                      </tr>
+                      <tr title="United Kingdom (0 4294967309 UK To Serve and Protect)">
+                        <td style="width: 24px;">
+                          <div class="flag">
+                            <img src="./nationflags.png" alt="Nation flag" style="position: absolute; top: -1px; left: -1px;">
+                          </div>
+                        </td>
+                        <td style="width: 48px;">
+                          <div class="rank">
+                            <img src="./rankstrip.gif" alt="Rank" style="position: absolute; top: -221px; left: 0px;">
+                          </div>
+                        </td>
+                        <td>SheriffBot</td>
+                      </tr>
+                      <tr title="Russia (41 13 RU Great Snooper v2.2)">
+                        <td style="width: 24px;">
+                          <div class="flag">
+                            <img src="./nationflags.png" alt="Nation flag" style="position: absolute; top: -1px; left: -903px;">
+                          </div>
+                        </td>
+                        <td style="width: 48px;">
+                          <div class="rank">
+                            <img src="./rankstrip.gif" alt="Rank" style="position: absolute; top: -221px; left: 0px;">
+                          </div>
+                        </td>
+                        <td>Slayer</td>
+                      </tr>
+                      <tr title="United Kingdom (0 0 GB ZNC 1.6.5 )">
+                        <td style="width: 24px;">
+                          <div class="flag">
+                            <img src="./nationflags.png" alt="Nation flag" style="position: absolute; top: -1px; left: -1px;">
+                          </div>
+                        </td>
+                        <td style="width: 48px;">
+                          <div class="rank">
+                            <img src="./rankstrip.gif" alt="Rank" style="position: absolute; top: -221px; left: 0px;">
+                          </div>
+                        </td>
+                        <td>StepS</td>
+                      </tr>
+                      <tr title="United Kingdom (0 0 GB 3.7.2.1  )">
+                        <td style="width: 24px;">
+                          <div class="flag">
+                            <img src="./nationflags.png" alt="Nation flag" style="position: absolute; top: -1px; left: -1px;">
+                          </div>
+                        </td>
+                        <td style="width: 48px;">
+                          <div class="rank">
+                            <img src="./rankstrip.gif" alt="Rank" style="position: absolute; top: -221px; left: 0px;">
+                          </div>
+                        </td>
+                        <td>Test</td>
+                      </tr>
+                      <tr title="Japan (27 7 JP ZNC)">
+                        <td style="width: 24px;">
+                          <div class="flag">
+                            <img src="./nationflags.png" alt="Nation flag" style="position: absolute; top: -1px; left: -595px;">
+                          </div>
+                        </td>
+                        <td style="width: 48px;">
+                          <div class="rank">
+                            <img src="./rankstrip.gif" alt="Rank" style="position: absolute; top: -221px; left: 0px;">
+                          </div>
+                        </td>
+                        <td>ViLXDAHMU</td>
+                      </tr>
+                      <tr title="Finland (12 13 FI Great Snooper v2.2)">
+                        <td style="width: 24px;">
+                          <div class="flag">
+                            <img src="./nationflags.png" alt="Nation flag" style="position: absolute; top: -1px; left: -265px;">
+                          </div>
+                        </td>
+                        <td style="width: 48px;">
+                          <div class="rank">
+                            <img src="./rankstrip.gif" alt="Rank" style="position: absolute; top: -221px; left: 0px;">
+                          </div>
+                        </td>
+                        <td>VoK</td>
+                      </tr>
+                      <tr title="United Kingdom (0 4294967309 UK http://snoop.worms2d.info/)">
+                        <td style="width: 24px;">
+                          <div class="flag">
+                            <img src="./nationflags.png" alt="Nation flag" style="position: absolute; top: -1px; left: -1px;">
+                          </div>
+                        </td>
+                        <td style="width: 48px;">
+                          <div class="rank">
+                            <img src="./rankstrip.gif" alt="Rank" style="position: absolute; top: -221px; left: 0px;">
+                          </div>
+                        </td>
+                        <td>WebSnoop</td>
+                      </tr>
+                      <tr title="Sweden (45 13 SE Great Snooper v2.2)">
+                        <td style="width: 24px;">
+                          <div class="flag">
+                            <img src="./nationflags.png" alt="Nation flag" style="position: absolute; top: -1px; left: -991px;">
+                          </div>
+                        </td>
+                        <td style="width: 48px;">
+                          <div class="rank">
+                            <img src="./rankstrip.gif" alt="Rank" style="position: absolute; top: -221px; left: 0px;">
+                          </div>
+                        </td>
+                        <td>windtalker</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="leftdatabox">
+          <div id="gamelistbox">
+            <div class="border10">
+              <!--div class="label" onmousedown="generic_cancel(this, event);" onmouseup="generic_cancel(this, event);" style="color: white;" id="chanlabel">#AnythingGoes</div-->
+              <div id="channellist" onmousedown="generic_cancel(this, event);" onmouseup="generic_cancel(this, event);">
+                <a href="javascript:void" id="AnythingGoes" class="selectedchannel">#AnythingGoes</a>
+                <a href="javascript:selectChannel(&#39;PartyTime&#39;)" id="PartyTime">#PartyTime</a>
+                <a href="javascript:selectChannel(&#39;RopersHeaven&#39;)" id="RopersHeaven">#RopersHeaven</a>
+                <a href="javascript:selectChannel(&#39;Help&#39;)" id="Help">#Help</a>
+              </div>
+              <div class="label">&nbsp;</div>
+              <div class="label" onmousedown="generic_cancel(this, event);" onmouseup="generic_cancel(this, event);">Games</div>
+              <div class="top40" style="background-color: #808080">
+                <div class="border1">
+                  <div id="tableholder2" class="border1" style="background-color: #000040; overflow: auto" onmousedown="list_mousedown(document.getElementById(&#39;gamelist&#39;), event);">
+                    <table class="datatable" width="100%" cellspacing="0">
+                      <tbody id="gamelist">
+                        <tr class="tablecaption">
+                          <td colspan="3">
+                            Game
+                          </td>
+                          <td style="width: 150px;">
+                            Host
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div id="chatbox">
+            <div class="border10">
+              <span class="label" onmousedown="generic_cancel(this, event);" onmouseup="generic_cancel(this, event);">Messages</span>
+              <div class="top20" style="background-color: #808080">
+                <div class="border1">
+                  <div class="border1" id="messages">
+                    <span>Network error<br></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="entrybox">
+        <div class="border10">
+          <form action="javascript:onSend()">
+            <table width="100%" cellspacing="0">
+              <tbody>
+                <tr>
+                  <td style="width: 150px;">
+                    <span class="label" onmousedown="generic_cancel(this, event);" onmouseup="generic_cancel(this, event);">Your name:</span>
+                  </td>
+                  <td>
+                    <span class="label" onmousedown="generic_cancel(this, event);" onmouseup="generic_cancel(this, event);">Message:</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="width: 150px;">
+                    <input id="name" maxlength="15" class="editbox">
+                  </td>
+                  <td>
+                    <input id="message" maxlength="200" class="editbox" onkeydown="if(event.keyCode==13)onSend();">
+                  </td>
+                  <!--td style="width:  100px;">
+            <input id="send"    type="button"   class="button" value="Send" onclick="onSend()"/>
+           </td-->
+                </tr>
+              </tbody>
+            </table>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+</body>
+
+</html>
