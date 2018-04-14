@@ -868,7 +868,7 @@
         req.onreadystatechange = function () {
           processSendChange(req);
         };
-        req.open("POST", url, true);
+        req.open("POST", 'http://snoop.wormnet.net:17030' + url, true);
         req.send(data);
       } else {
         logError("XMLHttpRequest error: " + errorMessage);
