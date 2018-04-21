@@ -76,7 +76,7 @@
         name = loc.substr(loc.indexOf('?') + 1);
       if (name && name != null && name != "null") {
         document.getElementById('name').value = name;
-        document.getElementById('message').focus();
+        getCurrentMessageField().focus();
       }
 
       messageScroller = new chatscroll.Pane(document.getElementById('messages'));
@@ -314,7 +314,7 @@
     }
 
     function addNick(nick) {
-      var messageField = document.getElementById('message');
+      var messageField = getCurrentMessageField();
       var message = messageField.value;
       var pos = message.indexOf(": ");
       if (pos < 0)
@@ -615,6 +615,7 @@
           htmlspecialchars(nick)
         ], [24, 48, 0]);
       row.ondblclick = function () {
+        closeSidebar();
         return addNick(nick);
       };
       row.origcolor = '';
@@ -723,7 +724,7 @@
     function onSend() {
       dataRequestPeriod = 1000;
       var name = document.getElementById('name').value;
-      var message = document.getElementById('message').value || document.getElementById('message_mobile').value;
+      var message = getCurrentMessageField().value;
       if (message == "")
         return;
       else
@@ -749,10 +750,11 @@
         }
         asyncSend('/data/message?' + activeChannel + '|' + xsrfKey, name + '|' + message);
         sentMessage = message;
-        document.getElementById('message').value = "";
+        getCurrentMessageField().value = '';
         //alert('All OK.');
       }
-      document.getElementById("message").focus();
+
+      getCurrentMessageField().focus();
     }
 
     //////////// XMLHTTP stuff ////////////
@@ -806,11 +808,11 @@
             var text = req.responseText;
             if (text != "") {
               if (sentMessage != "")
-                document.getElementById('message').value = sentMessage;
+                getCurrentMessageField().value = sentMessage;
               sentMessage = "";
               alert(text);
-              document.getElementById('message').focus();
-              document.getElementById('message').select();
+              getCurrentMessageField().focus();
+              getCurrentMessageField().select();
             }
           } else {
             logError("XMLHttpRequest post StateChange error: " + req.statusText);
@@ -883,9 +885,36 @@
       document.getElementById('container').classList.remove('sidebar-opened');
     }
 
+    function getCurrentBreakpoint() {
+      var head  = document.querySelector('head');
+      var style = window.getComputedStyle(head, ':before');
+      var contentMatcher = /"([a-z]+)"/;
+      return style.content.replace(contentMatcher, '$1');
+    }
+
+    function getCurrentMessageField() {
+      if (getCurrentBreakpoint() === 'mobile') {
+        return document.getElementById('message_mobile');
+      } else {
+        return document.getElementById('message');
+      }
+    }
+
     // -->
   </script>
   <style type="text/css">
+    @media only screen and (min-width: 1025px) {
+      head::before {
+        content: 'desktop';
+      }
+    }
+
+    @media only screen and (max-width: 1024px) {
+      head::before {
+        content: 'mobile';
+      }
+    }
+
     html,
     body {
       height: 100%;
